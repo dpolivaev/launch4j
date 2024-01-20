@@ -265,7 +265,6 @@ public class RcBuilder {
 		StringBuffer options = new StringBuffer();
 
 		if (jre.getOptions() != null && !jre.getOptions().isEmpty()) {
-			addSpace(options);
 			append(options, jre.getOptions(), " ");
 		}
 
@@ -389,13 +388,6 @@ public class RcBuilder {
 		return f.getPath().replaceAll("\\\\", "\\\\\\\\");
 	}
 	
-	private void addSpace(StringBuffer sb) {
-		int len = sb.length();
-
-		if (len-- > 0 && sb.charAt(len) != ' ') {
-			sb.append(' ');
-		}
-	}
 	
 	private void addVerBlockValue(String key, String value) {
 		_sb.append("   VALUE \"");
