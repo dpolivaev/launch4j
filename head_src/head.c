@@ -775,10 +775,57 @@ void appendHeapSize(char *dst, const int megabytesID, const int percentID,
 	}
 }
 
+int isJvmOptionValid(const char* jvm_option) {
+	if (strcmp(jvm_option, "-Djava.security.manager=allow") == 0 &&
+        strcmp(search.foundJavaVer, "1.017.") < 0) {
+        return 0;
+    }
+	if (strncmp(jvm_option, "--add-exports=", 14) == 0 && strcmp(search.foundJavaVer, "1.011.") < 0) {
+        return 0;
+    }
+
+    return 1;
+}
+
+void removeInvalidJvmOptions(char* jvm_options) {
+    int read_pos = 0;
+    int write_pos = 0;
+    int len = strlen(jvm_options);
+    int next_option_pos, i;
+
+    while (read_pos < len) {
+        // Find the position of the next newline character
+        next_option_pos = -1;
+        for (i = read_pos; i < len; ++i) {
+            if (jvm_options[i] == JVM_OPTION_SEPARATOR_CHAR) {
+                next_option_pos = i;
+                break;
+            }
+        }
+        if (next_option_pos == -1) {
+            next_option_pos = len;
+        }
+
+        // Check the condition for the substring
+        jvm_options[next_option_pos] = '\0';
+        if (isJvmOptionValid(jvm_options + read_pos)) {
+            // If true, replace JVM_OPTION_SEPARATOR_CHAR with ' ' and keep the substring
+            if(write_pos > 0)
+                jvm_options[write_pos++] = ' ';
+            for (i = read_pos; i < next_option_pos; ++i) {
+                jvm_options[write_pos++] = jvm_options[i];
+            }
+        }
+        read_pos = next_option_pos + 1;
+    }
+    jvm_options[write_pos] = '\0';
+}
+
 void setJvmOptions(char *jvmOptions, const char *exePath, int pathLen)
 {
 	if (loadString(JVM_OPTIONS, jvmOptions))
 	{
+		removeInvalidJvmOptions(jvmOptions);
 		strcat(jvmOptions, " ");
 	}
 
@@ -948,11 +995,13 @@ BOOL pathJreSearch(const char *exePath, const int pathLen)
     			appendPath(launcher.cmd, pathNoBin);
     		}
 
+			char version[STR] = {0};
 			BOOL is64Bit;
-			if (isLauncherPathValid(launcher.cmd) && isPathJavaVersionGood(launcher.cmd, &is64Bit))
+			if (isLauncherPathValid(launcher.cmd) && isPathJavaVersionGood(launcher.cmd, version, &is64Bit))
     		{
                 search.foundJava = is64Bit ? JAVA_FOUND | KEY_WOW64_64KEY : JAVA_FOUND;
     			strcpy(search.foundJavaHome, launcher.cmd);
+				strcpy(search.foundJavaVer, version);
     			return TRUE;
     		}
 
@@ -1414,7 +1463,7 @@ BOOL isJavaVersionGood(const char *version, BOOL is64Bit)
 /*
  * Run <path>/bin/java(w) -version. Return TRUE if version is good.
  */
-BOOL isPathJavaVersionGood(const char *path, BOOL *is64Bit)
+BOOL isPathJavaVersionGood(const char *path, char* formattedVersion, BOOL *is64Bit)
 {
 	SECURITY_ATTRIBUTES saAttr;
 	HANDLE outputRd = NULL;
@@ -1452,7 +1501,7 @@ BOOL isPathJavaVersionGood(const char *path, BOOL *is64Bit)
 		CloseHandle(outputRd);
 		return FALSE;
 	}
-	char version[STR] = {0}, formattedVersion[STR] = {0};
+	char version[STR] = {0};
 	
 	getVersionFromOutput(outputRd, version, sizeof(version), is64Bit);
 	CloseHandle(outputRd);
@@ -1461,5 +1510,6 @@ BOOL isPathJavaVersionGood(const char *path, BOOL *is64Bit)
 		formatJavaVersion(formattedVersion, version);
 		return isJavaVersionGood(formattedVersion, *is64Bit);
 	}
+	formattedVersion[0] = '\0';
 	return FALSE;
 }

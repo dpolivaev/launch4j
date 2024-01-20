@@ -265,7 +265,8 @@ public class RcBuilder {
 		StringBuffer options = new StringBuffer();
 
 		if (jre.getOptions() != null && !jre.getOptions().isEmpty()) {
-			append(options, jre.getOptions(), " ");
+			final String OPTION_SEPARATOR = "\u001E";
+			append(options, jre.getOptions(),  OPTION_SEPARATOR);
 		}
 
 		addText(JVM_OPTIONS, options.toString());

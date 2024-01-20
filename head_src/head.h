@@ -78,6 +78,8 @@
 #define TRUE_STR "true"
 #define FALSE_STR "false"
 
+#define JVM_OPTION_SEPARATOR_CHAR '\x1E'
+
 #define ERROR_FORMAT "Error:\t\t%s\n"
 #define debug(args...) if (hLog != NULL) fprintf(hLog, ## args);
 #define debugAll(args...) if (debugAll && hLog != NULL) fprintf(hLog, ## args);
